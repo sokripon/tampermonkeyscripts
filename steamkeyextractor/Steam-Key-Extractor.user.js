@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam key extractor
 // @namespace    https://github.com/sokripon/tampermonkeyscripts/
-// @license      MIT
+// @license      WTFPL
 // @version      0.1
 // @description  Extract Steam keys from Websites using regex
 // @author       sokripon
