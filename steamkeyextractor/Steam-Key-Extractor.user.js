@@ -11,7 +11,6 @@
 // @icon         https://github.com/sokripon/tampermonkeyscripts/blob/main/steamkeyextractor/scripticon.png?raw=true
 // @supportURL   https://github.com/sokripon/tampermonkeyscripts/issues/
 // @contributionURL https://github.com/sokripon/tampermonkeyscripts/
-// @updateURL    https://raw.githubusercontent.com/sokripon/tampermonkeyscripts/main/steamkeyextractor/Steam-Key-Extractor.meta.js
 // ==/UserScript==
 
 var box = document.createElement('div');
