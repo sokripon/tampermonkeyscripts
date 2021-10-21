@@ -7,6 +7,7 @@
 // @match        https://*/*
 // @match        http://*/*
 // @run-at context-menu
+// @icon         https://github.com/sokripon/tampermonkeyscripts/blob/main/steamkeyextractor/scripticon.png?raw=true
 // ==/UserScript==
 
 var box = document.createElement('div');
