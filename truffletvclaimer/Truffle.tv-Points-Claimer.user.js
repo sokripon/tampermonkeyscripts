@@ -6,7 +6,7 @@
 // @author       sokripon
 // @license      MIT
 // @match        https://new.ludwig.social/*
-// @icon         https://github.com/sokripon/tampermonkeyscripts/truffletvclaimer/icon.png
+// @icon         https://raw.githubusercontent.com/sokripon/tampermonkeyscripts/main/truffletvclaimer/icon.png
 // @grant GM_log
 // @supportURL   https://github.com/sokripon/tampermonkeyscripts/issues/
 // @contributionURL https://github.com/sokripon/tampermonkeyscripts/
