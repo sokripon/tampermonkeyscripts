@@ -8,7 +8,7 @@
 // @match        https://*/*
 // @match        http://*/*
 // @run-at context-menu
-// @icon         https://raw.githubusercontent.com/sokripon/tampermonkeyscripts/main/steamkeyextractor/scripticon.png
+// @icon         https://raw.githubusercontent.com/sokripon/tampermonkeyscripts/main/steamkeyextractor/icon.png
 // @supportURL   https://github.com/sokripon/tampermonkeyscripts/issues/
 // @contributionURL https://github.com/sokripon/tampermonkeyscripts/
 // ==/UserScript==
