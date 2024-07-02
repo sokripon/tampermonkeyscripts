@@ -9,8 +9,8 @@
 // @author           sokripon
 // @contributionURL  https://github.com/sokripon/tampermonkeyscripts/
 // @supportURL       https://github.com/sokripon/tampermonkeyscripts/issues/
-// @downloadURL      https://github.com/sokripon/tampermonkeyscripts/raw/main/claudeSvelteArtifact/claudeSvelteArtifact.js
-// @updateURL        https://github.com/sokripon/tampermonkeyscripts/raw/main/claudeSvelteArtifact/claudeSvelteArtifact.js
+// @downloadURL      https://github.com/sokripon/tampermonkeyscripts/raw/main/claudeSvelteArtifact/claudeSvelteArtifact.user.js
+// @updateURL        https://github.com/sokripon/tampermonkeyscripts/raw/main/claudeSvelteArtifact/claudeSvelteArtifact.user.js
 // ==/UserScript==
 
 (function () {
