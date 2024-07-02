@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Svelte REPL in claude
 // @namespace        https://github.com/sokripon/tampermonkeyscripts/
-// @version          1.0
+// @version          1.1
 // @description      Ability to load code into svelte REPL from URL hash or query, and generate shareable links for other users. Also adds support for embedding svelte REPL in claude.ai chat.
 // @match            https://svelte.dev/repl/*
 // @match            https://claude.ai/chat/*
@@ -17,36 +17,41 @@
 	let originalCode = null;
 	let firstLoad = true;
 
-	function embedSvelteRepl() {
-		// Find all code elements with the class 'language-svelte'
-		const svelteCodeBlocks = document.querySelectorAll('code.language-svelte');
+	function replaceCodeblockWithIFRAME(codeBlock) {
+		const parentDiv = codeBlock.parentElement;
 
-		svelteCodeBlocks.forEach((codeBlock) => {
-			// Check if the parent of the code block is a div with class 'h-fit'
-			// This is so that we only replace the artifact from claude and not other code blocks
-			const parentDiv = codeBlock.parentElement;
-			if (!(parentDiv && parentDiv.tagName === 'DIV' && parentDiv.classList.contains('h-fit'))) {
-				return; // Nomral code block, bleh
-			}
+		// Get the code
+		const code = codeBlock.textContent;
 
-			// Get the code
-			const code = codeBlock.textContent;
+		// Create the iframe for svelte REPL
+		const iframe = document.createElement('iframe');
 
-			// Create the iframe for svelte REPL
-			const iframe = document.createElement('iframe');
+		// Set the src attribute with the encoded code
+		const encodedCode = encodeURIComponent(code);
+		iframe.src = `https://svelte.dev/repl/hello-world/embed?version=4.2.18#${encodedCode}`;
 
-			// Set the src attribute with the encoded code
-			const encodedCode = encodeURIComponent(code);
-			iframe.src = `https://svelte.dev/repl/hello-world/embed?version=4.2.18#${encodedCode}`;
+		// Set some styling for the iframe
+		iframe.style.width = '100%';
+		iframe.style.height = '100%';
+		iframe.style.border = 'none';
 
-			// Set some styling for the iframe
-			iframe.style.width = '100%';
-			iframe.style.height = '100%';
-			iframe.style.border = 'none';
+		// Replace artifact with svelte REPL iframe
+		parentDiv.parentNode.replaceChild(iframe, parentDiv);
+	}
 
-			// Replace artifact with svelte REPL iframe
-			parentDiv.parentNode.replaceChild(iframe, parentDiv);
-		});
+	function embedSvelteReplIn(node) {
+		const loadingArtifact = document.querySelector('span[class="sr-only"]');
+		// if this element is present, it means that claude is still working on the artifact
+		if (loadingArtifact) {
+			return;
+		}
+		const codeBlocks = node.querySelectorAll('div.h-fit > code.language-svelte');
+		if (codeBlocks.length > 0) {
+			codeBlocks.forEach((codeBlock) => {
+				console.log('Svelte code block found');
+				replaceCodeblockWithIFRAME(codeBlock);
+			});
+		}
 	}
 
 	// Function to find the REPL iframe if it exists
@@ -151,19 +156,28 @@
 			init();
 		}
 	}
-
-	function yes() {
-		setTimeout(() => {
-			const loadingArtifact = document.querySelector('span[class="sr-only"]');
-			// do not try to embed while claude is still cooking
-			if (!loadingArtifact) {
-				embedSvelteRepl();
-			}
-			yes();
-		}, 1000);
-	}
-
-	if (window.location.href.startsWith('https://claude.ai/')) {
-		yes();
+	if (window.location.href.startsWith('https://claude.ai/chat')) {
+		let observer = new MutationObserver(function (mutations) {
+			mutations.forEach(function (mutation) {
+				// To check if new artifacts are added for example when opening an artifact
+				mutation.addedNodes.forEach((node) => {
+					if (node.nodeType !== Node.ELEMENT_NODE) {
+						return;
+					}
+					embedSvelteReplIn(node);
+				});
+				// This is to check if claude finished working on the artifact
+				mutation.removedNodes.forEach((node) => {
+					if (node.nodeType !== Node.ELEMENT_NODE) {
+						return;
+					}
+					const loadingArtifact = node.querySelector('span[class="sr-only"]');
+					if (loadingArtifact) {
+						embedSvelteReplIn(document.body);
+					}
+				});
+			});
+		});
+		observer.observe(document.body, { childList: true, subtree: true });
 	}
 })();
