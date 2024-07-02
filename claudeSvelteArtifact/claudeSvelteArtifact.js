@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Svelte REPL in claude
 // @namespace        https://github.com/sokripon/tampermonkeyscripts/
-// @version          1.1
+// @version          1.3
 // @description      Ability to load code into svelte REPL from URL hash or query, and generate shareable links for other users. Also adds support for embedding svelte REPL in claude.ai chat.
 // @match            https://svelte.dev/repl/*
 // @match            https://claude.ai/chat/*
@@ -17,39 +17,97 @@
 	let originalCode = null;
 	let firstLoad = true;
 
-	function replaceCodeblockWithIFRAME(codeBlock) {
+	function addReplToCodeblock(codeBlock) {
+		/** @type {HTMLElement} */
 		const parentDiv = codeBlock.parentElement;
+		console.debug(`Parent div: ${parentDiv}`);
+		const artifactHeaderDiv = parentDiv.parentElement.parentElement.firstChild;
+		console.debug(`Artifact header div: ${artifactHeaderDiv}`);
+		const artifactHeaderTitleDiv = artifactHeaderDiv.firstChild;
+		console.debug(`Artifact header title div: ${artifactHeaderTitleDiv}`);
 
-		// Get the code
+		// Get the code from the code block
 		const code = codeBlock.textContent;
+
+		// Hide the parent div
+		parentDiv.style.display = 'none';
 
 		// Create the iframe for svelte REPL
 		const iframe = document.createElement('iframe');
 
 		// Set the src attribute with the encoded code
 		const encodedCode = encodeURIComponent(code);
-		iframe.src = `https://svelte.dev/repl/hello-world/embed?version=4.2.18#${encodedCode}`;
+		iframe.src = `https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39/embed?version=4.2.18#${encodedCode}`;
 
 		// Set some styling for the iframe
 		iframe.style.width = '100%';
 		iframe.style.height = '100%';
 		iframe.style.border = 'none';
 
-		// Replace artifact with svelte REPL iframe
-		parentDiv.parentNode.replaceChild(iframe, parentDiv);
+		// Insert the iframe after the hidden parent div
+		parentDiv.parentNode.insertBefore(iframe, parentDiv.nextSibling);
+		// Button to toggle the REPL visibility
+		const toggleButton = document.createElement('button');
+		toggleButton.textContent = 'Hide REPL';
+		toggleButton.id = 'toggleButtonSvelteRepl';
+
+		// Style the button
+		toggleButton.style.border = 'none';
+		toggleButton.style.paddingLeft = '10px';
+		toggleButton.style.fontSize = '14px';
+		toggleButton.style.cursor = 'pointer';
+
+		toggleButton.onclick = function () {
+			if (parentDiv.style.display === 'none') {
+				parentDiv.style.display = '';
+				iframe.style.display = 'none';
+				toggleButton.textContent = 'Show REPL';
+				console.debug(`Clicked toggle button, hiding iframe by setting display to 'none'`);
+			} else {
+				parentDiv.style.display = 'none';
+				iframe.style.display = '';
+				toggleButton.textContent = 'Hide REPL';
+				console.debug(`Clicked toggle button, showing iframe by setting display to ''`);
+                
+			}
+		};
+		// Button to open the REPL in a new tab
+		const openReplButton = document.createElement('button');
+		openReplButton.textContent = 'Open REPL Tab';
+		openReplButton.id = 'openReplButtonSvelteRepl';
+		openReplButton.style.border = 'none';
+		openReplButton.style.paddingLeft = '10px';
+		openReplButton.style.fontSize = '14px';
+		openReplButton.style.cursor = 'pointer';
+		openReplButton.onclick = function () {
+			window.open(
+				`https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39?version=4.2.18#${encodedCode}`,
+				'_blank'
+			);
+		};
+		let prevOpenReplButton = artifactHeaderDiv.querySelector('#openReplButtonSvelteRepl');
+		if (prevOpenReplButton) {
+			prevOpenReplButton.remove();
+		}
+		let prevToggleButton = artifactHeaderDiv.querySelector('#toggleButtonSvelteRepl');
+		if (prevToggleButton) {
+			prevToggleButton.remove();
+		}
+        artifactHeaderTitleDiv.appendChild(openReplButton);
+        artifactHeaderTitleDiv.appendChild(toggleButton);
 	}
 
 	function embedSvelteReplIn(node) {
 		const loadingArtifact = document.querySelector('span[class="sr-only"]');
 		// if this element is present, it means that claude is still working on the artifact
-		if (loadingArtifact) {
-			return;
-		}
+
 		const codeBlocks = node.querySelectorAll('div.h-fit > code.language-svelte');
-		if (codeBlocks.length > 0) {
+		if (!loadingArtifact && codeBlocks.length > 0) {
+			console.debug(`Found ${codeBlocks.length} Svelte code blocks`);
 			codeBlocks.forEach((codeBlock) => {
-				console.log('Svelte code block found');
-				replaceCodeblockWithIFRAME(codeBlock);
+				console.debug(`Adding REPL to code block:`);
+				console.debug(codeBlock);
+				addReplToCodeblock(codeBlock);
 			});
 		}
 	}
@@ -123,16 +181,16 @@
 		if (firstLoad && originalCode !== null) {
 			firstLoad = false;
 			setEditorContent(originalCode);
-			console.log('Code loaded from URL');
+			console.debug('Code loaded from URL');
 			return;
 		}
 		const code = getCodeFromUrl();
 		if (code && code !== originalCode) {
 			originalCode = code;
 			setEditorContent(code);
-			console.log('Code loaded from URL');
+			console.debug('Code loaded from URL');
 		} else if (!code) {
-			console.log('No code found in URL!');
+			console.debug('No code found in URL');
 		}
 	}
 
@@ -152,7 +210,7 @@
 		if (document.readyState === 'loading') {
 			document.addEventListener('DOMContentLoaded', init);
 		} else {
-			console.log('Init bruv');
+			console.debug('Init');
 			init();
 		}
 	}
