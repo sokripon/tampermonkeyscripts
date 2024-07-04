@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Svelte REPL in claude
 // @namespace        https://github.com/sokripon/tampermonkeyscripts/
-// @version          1.4
+// @version          1.5
 // @description      Adds support for embedding svelte REPL in claude.ai chat.
 // @match            https://svelte.dev/repl/*
 // @match            https://claude.ai/chat/*
@@ -151,7 +151,6 @@
 			console.debug('Editor element found');
 			window.parent.postMessage('ready', 'https://claude.ai');
 		});
-
 	}
 
 	function runWhenEditorReady(callback) {
@@ -159,9 +158,6 @@
 			callback();
 		});
 	}
-		
-
-
 
 	function embedSvelteReplIn(node) {
 		const loadingArtifact = document.querySelector('span[class="sr-only"]');
@@ -186,7 +182,6 @@
 		const iframe = findReplIframe();
 		return iframe ? iframe.contentDocument : document;
 	}
-
 
 	// Function to find the editor element
 	function findEditor() {
@@ -232,11 +227,12 @@
 			sendReadyToParentWhenReady();
 		} else {
 			const code = getCodeFromHash();
-			runWhenEditorReady(() => {
-				setEditorContent(code);
-			});
+			if (code) {
+				runWhenEditorReady(() => {
+					setEditorContent(code);
+				});
+			}
 		}
-
 	}
 
 	if (window.location.href.startsWith('https://claude.ai/chat')) {
