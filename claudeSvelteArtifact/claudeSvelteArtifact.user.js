@@ -1,23 +1,42 @@
 // ==UserScript==
 // @name             Svelte REPL in claude
 // @namespace        https://github.com/sokripon/tampermonkeyscripts/
-// @version          1.3
-// @description      Ability to load code into svelte REPL from URL hash or query, and generate shareable links for other users. Also adds support for embedding svelte REPL in claude.ai chat.
+// @version          1.4
+// @description      Adds support for embedding svelte REPL in claude.ai chat.
 // @match            https://svelte.dev/repl/*
 // @match            https://claude.ai/chat/*
 // @grant            none
 // @author           sokripon
 // @contributionURL  https://github.com/sokripon/tampermonkeyscripts/
 // @supportURL       https://github.com/sokripon/tampermonkeyscripts/issues/
-// @downloadURL      https://github.com/sokripon/tampermonkeyscripts/raw/main/claudeSvelteArtifact/claudeSvelteArtifact.user.js
-// @updateURL        https://github.com/sokripon/tampermonkeyscripts/raw/main/claudeSvelteArtifact/claudeSvelteArtifact.user.js
+// @downloadURL      https://github.com/sokripon/tampermonkeyscripts/raw/main/claudeSvelteArtifact/claudeSvelteArtifact.js
+// @updateURL        https://github.com/sokripon/tampermonkeyscripts/raw/main/claudeSvelteArtifact/claudeSvelteArtifact.js
 // ==/UserScript==
 
 (function () {
 	'use strict';
 
-	let originalCode = null;
-	let firstLoad = true;
+	// https://stackoverflow.com/a/61511955/12580887
+	function waitForElm(selector) {
+		return new Promise((resolve) => {
+			if (document.querySelector(selector)) {
+				return resolve(document.querySelector(selector));
+			}
+
+			const observer = new MutationObserver((mutations) => {
+				if (document.querySelector(selector)) {
+					observer.disconnect();
+					resolve(document.querySelector(selector));
+				}
+			});
+
+			// If you get "parameter 1 is not of type 'Node'" error, see https://stackoverflow.com/a/77855838/492336
+			observer.observe(document.body, {
+				childList: true,
+				subtree: true
+			});
+		});
+	}
 
 	function addReplToCodeblock(codeBlock) {
 		/** @type {HTMLElement} */
@@ -36,10 +55,11 @@
 
 		// Create the iframe for svelte REPL
 		const iframe = document.createElement('iframe');
+		iframe.id = 'svelteReplIframe';
 
 		// Set the src attribute with the encoded code
 		const encodedCode = encodeURIComponent(code);
-		iframe.src = `https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39/embed?version=4.2.18#${encodedCode}`;
+		iframe.src = `https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39/embed?version=4.2.18`;
 
 		// Set some styling for the iframe
 		iframe.style.width = '100%';
@@ -62,7 +82,7 @@
 		toggleButton.onclick = function () {
 			if (parentDiv.style.display === 'none') {
 				parentDiv.style.display = '';
-				iframe.style.display = 'none';
+				iframe.style.display = 'hidden';
 				toggleButton.textContent = 'Show REPL';
 				console.debug(`Clicked toggle button, hiding iframe by setting display to 'none'`);
 			} else {
@@ -70,7 +90,6 @@
 				iframe.style.display = '';
 				toggleButton.textContent = 'Hide REPL';
 				console.debug(`Clicked toggle button, showing iframe by setting display to ''`);
-                
 			}
 		};
 		// Button to open the REPL in a new tab
@@ -94,21 +113,62 @@
 		let prevToggleButton = artifactHeaderDiv.querySelector('#toggleButtonSvelteRepl');
 		if (prevToggleButton) {
 			prevToggleButton.remove();
+			if (prevToggleButton.textContent === 'Hide REPL') {
+				parentDiv.style.display = 'none';
+				iframe.style.display = '';
+				toggleButton.textContent = 'Hide REPL';
+			} else {
+				parentDiv.style.display = '';
+				iframe.style.display = 'hidden';
+				toggleButton.textContent = 'Show REPL';
+			}
 		}
-        artifactHeaderTitleDiv.appendChild(openReplButton);
-        artifactHeaderTitleDiv.appendChild(toggleButton);
+		artifactHeaderTitleDiv.appendChild(openReplButton);
+		artifactHeaderTitleDiv.appendChild(toggleButton);
+
+		window.addEventListener('message', function (e) {
+			if (e.origin !== 'https://svelte.dev') {
+				console.error('Received message from invalid origin');
+				return;
+			}
+			if (e.data === 'ready') {
+				sendCodeToIframe(code);
+			}
+		});
 	}
+
+	function sendCodeToIframe(code) {
+		const iframe = document.getElementById('svelteReplIframe');
+		if (!iframe) {
+			console.error('Could not find the iframe');
+			return;
+		}
+		iframe.contentWindow.postMessage(code, 'https://svelte.dev/repl');
+	}
+
+	function sendReadyToParentWhenReady() {
+		runWhenEditorReady(() => {
+			console.debug('Editor element found');
+			window.parent.postMessage('ready', 'https://claude.ai');
+		});
+
+	}
+
+	function runWhenEditorReady(callback) {
+		waitForElm('[contenteditable="true"]:not([aria-readonly])').then((elm) => {
+			callback();
+		});
+	}
+		
+
+
 
 	function embedSvelteReplIn(node) {
 		const loadingArtifact = document.querySelector('span[class="sr-only"]');
 		// if this element is present, it means that claude is still working on the artifact
-
 		const codeBlocks = node.querySelectorAll('div.h-fit > code.language-svelte');
 		if (!loadingArtifact && codeBlocks.length > 0) {
-			console.debug(`Found ${codeBlocks.length} Svelte code blocks`);
 			codeBlocks.forEach((codeBlock) => {
-				console.debug(`Adding REPL to code block:`);
-				console.debug(codeBlock);
 				addReplToCodeblock(codeBlock);
 			});
 		}
@@ -127,17 +187,12 @@
 		return iframe ? iframe.contentDocument : document;
 	}
 
-	// Function to get the appropriate window (iframe or main)
-	function getWindow() {
-		const iframe = findReplIframe();
-		return iframe ? iframe.contentWindow : window;
-	}
 
 	// Function to find the editor element
 	function findEditor() {
 		const doc = getDocument();
-		const possibleEditors = doc.querySelectorAll('textarea, [contenteditable="true"]');
-		return possibleEditors[0];
+		const editor = doc.querySelector('[contenteditable="true"]:not([aria-readonly])');
+		return editor;
 	}
 
 	// Function to set the editor content
@@ -147,75 +202,43 @@
 			console.error('Could not find the editor element');
 			return;
 		}
-
 		if (editor.tagName.toLowerCase() === 'textarea') {
 			editor.value = content;
 		} else {
 			editor.innerText = content;
 		}
-
-		editor.dispatchEvent(new Event('input', { bubbles: true }));
-		editor.dispatchEvent(new Event('change', { bubbles: true }));
 	}
 
 	function getCodeFromHash() {
-		return window.location.hash.replace(/^#/, '');
-	}
-
-	function getCodeFromQuery() {
-		return new URLSearchParams(window.location.href).get('code');
-	}
-
-	function getCodeFromUrl() {
-		let hashCode = getCodeFromHash();
-		let queryCode = getCodeFromQuery();
-		if (hashCode) {
-			return decodeURIComponent(hashCode);
-		}
-		if (queryCode) {
-			return decodeURIComponent(queryCode);
-		}
-		return null;
-	}
-
-	// Function to load code from URL
-	function loadCodeFromUrl() {
-		if (firstLoad && originalCode !== null) {
-			firstLoad = false;
-			setEditorContent(originalCode);
-			console.debug('Code loaded from URL');
+		const hash = window.location.hash.replace(/^#/, '');
+		if (!hash) {
 			return;
 		}
-		const code = getCodeFromUrl();
-		if (code && code !== originalCode) {
-			originalCode = code;
-			setEditorContent(code);
-			console.debug('Code loaded from URL');
-		} else if (!code) {
-			console.debug('No code found in URL');
-		}
-	}
-
-	// Run on page load and when URL changes
-	function init() {
-		// Store the original code from the URL
-		originalCode = getCodeFromUrl();
-		// Wait a bit so everything can load
-		setTimeout(() => {
-			loadCodeFromUrl();
-		}, 1000);
-
-		getWindow().addEventListener('hashchange', loadCodeFromUrl);
+		const code = decodeURIComponent(hash);
+		return code;
 	}
 
 	if (window.location.href.startsWith('https://svelte.dev/repl')) {
-		if (document.readyState === 'loading') {
-			document.addEventListener('DOMContentLoaded', init);
+		console.debug('In svelte.dev/repl');
+		if (window !== window.parent) {
+			window.addEventListener('message', function (e) {
+				/** @type {MessageEvent} */
+				// Get the sent data
+				if (e.origin !== 'https://claude.ai') {
+					return;
+				}
+				setEditorContent(e.data);
+			});
+			sendReadyToParentWhenReady();
 		} else {
-			console.debug('Init');
-			init();
+			const code = getCodeFromHash();
+			runWhenEditorReady(() => {
+				setEditorContent(code);
+			});
 		}
+
 	}
+
 	if (window.location.href.startsWith('https://claude.ai/chat')) {
 		let observer = new MutationObserver(function (mutations) {
 			mutations.forEach(function (mutation) {
