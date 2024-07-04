@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name             Svelte REPL in claude
 // @namespace        https://github.com/sokripon/tampermonkeyscripts/
-// @version          1.5
+// @version          1.6
 // @description      Adds support for embedding svelte REPL in claude.ai chat.
 // @match            https://svelte.dev/repl/*
+// @match            https://svelte-5-preview.vercel.app/*
 // @match            https://claude.ai/chat/*
 // @grant            none
 // @author           sokripon
@@ -16,7 +17,13 @@
 (function () {
 	'use strict';
 
-	let svelteVersion = '4.2.18';
+	// When using a release version of svelte
+	const svelteReplURL = 'https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39';
+	const svelteReplURLSuffix = '/embed?version=4.2.18';
+
+	// When using a preview version of svelte 5
+	//const svelteReplURL = 'https://svelte-5-preview.vercel.app';
+	//const svelteReplURLSuffix = '';
 
 	// https://stackoverflow.com/a/61511955/12580887
 	function waitForElm(selector) {
@@ -61,7 +68,7 @@
 
 		// Set the src attribute with the encoded code
 		const encodedCode = encodeURIComponent(code);
-		iframe.src = `https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39/embed?version=${svelteVersion}`;
+		iframe.src = `${svelteReplURL}${svelteReplURLSuffix}`;
 
 		// Set some styling for the iframe
 		iframe.style.width = '100%';
@@ -103,10 +110,7 @@
 		openReplButton.style.fontSize = '14px';
 		openReplButton.style.cursor = 'pointer';
 		openReplButton.onclick = function () {
-			window.open(
-				`https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39?version=${svelteVersion}#${encodedCode}`,
-				'_blank'
-			);
+			window.open(`${svelteReplURL}#${encodedCode}`, '_blank');
 		};
 		let prevOpenReplButton = artifactHeaderDiv.querySelector('#openReplButtonSvelteRepl');
 		if (prevOpenReplButton) {
@@ -129,10 +133,10 @@
 		artifactHeaderTitleDiv.appendChild(toggleButton);
 
 		window.addEventListener('message', function (e) {
-			if (e.origin !== 'https://svelte.dev') {
-				console.error('Received message from invalid origin');
-				return;
-			}
+			// if (e.origin !== 'https://svelte.dev') {
+			// 	console.error('Received message from invalid origin');
+			// 	return;
+			// }
 			if (e.data === 'ready') {
 				sendCodeToIframe(code);
 			}
@@ -145,7 +149,7 @@
 			console.error('Could not find the iframe');
 			return;
 		}
-		iframe.contentWindow.postMessage(code, 'https://svelte.dev/repl');
+		iframe.contentWindow.postMessage(code, svelteReplURL);
 	}
 
 	function sendReadyToParentWhenReady() {
@@ -175,7 +179,7 @@
 	// Function to find the REPL iframe if it exists
 	function findReplIframe() {
 		return Array.from(document.getElementsByTagName('iframe')).find((iframe) =>
-			iframe.src.startsWith('https://svelte.dev/repl')
+			iframe.src.startsWith(svelteReplURL)
 		);
 	}
 
@@ -215,7 +219,7 @@
 		return code;
 	}
 
-	if (window.location.href.startsWith('https://svelte.dev/repl')) {
+	if (window.location.href.startsWith(svelteReplURL)) {
 		console.debug('In svelte.dev/repl');
 		if (window !== window.parent) {
 			window.addEventListener('message', function (e) {
