@@ -16,6 +16,8 @@
 (function () {
 	'use strict';
 
+	let svelteVersion = '4.2.18';
+
 	// https://stackoverflow.com/a/61511955/12580887
 	function waitForElm(selector) {
 		return new Promise((resolve) => {
@@ -59,7 +61,7 @@
 
 		// Set the src attribute with the encoded code
 		const encodedCode = encodeURIComponent(code);
-		iframe.src = `https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39/embed?version=4.2.18`;
+		iframe.src = `https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39/embed?version=${svelteVersion}`;
 
 		// Set some styling for the iframe
 		iframe.style.width = '100%';
@@ -102,7 +104,7 @@
 		openReplButton.style.cursor = 'pointer';
 		openReplButton.onclick = function () {
 			window.open(
-				`https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39?version=4.2.18#${encodedCode}`,
+				`https://svelte.dev/repl/7e349e6885dd4e23a9b8a8e0786fee39?version=${svelteVersion}#${encodedCode}`,
 				'_blank'
 			);
 		};
